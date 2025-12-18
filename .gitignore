@@ -1,0 +1,46 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
+
+# Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Spring Boot
+application-local.yml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads
+uploads/
+*.jpg
+*.png
+*.gif
+
+# Logs
+logs/
+*.log
+
