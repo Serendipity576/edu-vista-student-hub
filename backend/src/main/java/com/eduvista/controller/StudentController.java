@@ -1,11 +1,11 @@
 package com.eduvista.controller;
 
-import com.eduvista.entity.Student;
+import com.eduvista.dto.PageResponse; // 必须导入你刚才创建的 PageResponse 类
+import com.eduvista.dto.StudentDTO;
 import com.eduvista.service.StudentService;
 import com.eduvista.util.CommonResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -32,41 +32,51 @@ public class StudentController {
     @Value("${file.upload.path}")
     private String uploadPath;
 
+    /**
+     * 修改点：将返回类型改为 CommonResponse<PageResponse<StudentDTO>>
+     */
     @GetMapping("/list")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-    public CommonResponse<Page<Student>> getStudentList(
+    public CommonResponse<PageResponse<StudentDTO>> getStudentList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword) {
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        Page<Student> students;
+
+        // 修改点：变量类型也改为 PageResponse<StudentDTO>
+        PageResponse<StudentDTO> students;
+
         if (keyword != null && !keyword.isEmpty()) {
             students = studentService.search(keyword, pageable);
         } else {
             students = studentService.findAll(pageable);
         }
+
         return CommonResponse.success(students);
     }
 
+    // --- 以下方法保持不变 ---
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-    public CommonResponse<Student> getStudentById(@PathVariable Long id) {
-        Student student = studentService.findById(id);
+    public CommonResponse<StudentDTO> getStudentById(@PathVariable Long id) {
+        StudentDTO student = studentService.findById(id);
         return CommonResponse.success(student);
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public CommonResponse<Student> createStudent(@RequestBody Student student) {
-        Student saved = studentService.save(student);
+    public CommonResponse<StudentDTO> createStudent(@RequestBody StudentDTO student) {
+        StudentDTO saved = studentService.save(student);
         return CommonResponse.success(saved);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public CommonResponse<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
+    public CommonResponse<StudentDTO> updateStudent(@PathVariable Long id, @RequestBody StudentDTO student) {
         student.setId(id);
-        Student updated = studentService.save(student);
+        StudentDTO updated = studentService.save(student);
         return CommonResponse.success(updated);
     }
 
@@ -103,7 +113,7 @@ public class StudentController {
 
         String avatarUrl = "/api/uploads/" + filename;
 
-        Student student = studentService.findById(id);
+        StudentDTO student = studentService.findById(id);
         student.setAvatar(avatarUrl);
         studentService.save(student);
 
@@ -115,9 +125,8 @@ public class StudentController {
 
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-    public CommonResponse<List<Student>> getAllStudents() {
-        List<Student> students = studentService.findAll();
+    public CommonResponse<List<StudentDTO>> getAllStudents() {
+        List<StudentDTO> students = studentService.findAll();
         return CommonResponse.success(students);
     }
 }
-
