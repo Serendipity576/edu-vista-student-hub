@@ -1,4 +1,4 @@
-package com.eduvista.dto;
+package com.eduvista.util;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -6,7 +6,7 @@
       </div>
       <div class="header-right">
         <el-button :icon="themeStore.isDark ? 'Sunny' : 'Moon'" circle @click="themeStore.toggleTheme" />
-        <el-dropdown @command="handleCommand">
+        <el-dropdown trigger="click" @command="handleCommand">
           <span class="user-info">
             <el-avatar :src="authStore.user?.avatar" :size="32" />
             <span class="username">{{ authStore.user?.username }}</span>
@@ -26,6 +26,7 @@
           router
           :collapse="false"
           class="sidebar-menu"
+          @select="handleMenuSelect"
         >
           <el-menu-item index="/dashboard" v-if="authStore.user?.role === 'ADMIN'">
             <el-icon><DataAnalysis /></el-icon>
@@ -66,6 +67,13 @@ const handleCommand = (command) => {
   if (command === 'logout') {
     authStore.logout()
     router.push({ name: 'Login' })
+  }
+}
+
+const handleMenuSelect = (index) => {
+  // 显式跳转，确保点击菜单一定导航
+  if (index) {
+    router.push(index)
   }
 }
 </script>

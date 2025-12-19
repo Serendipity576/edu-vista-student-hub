@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import axios from '@/utils/axios'
@@ -75,10 +75,6 @@ const rules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
 }
 
-onMounted(() => {
-  loadStudent()
-})
-
 const loadStudent = async () => {
   loading.value = true
   try {
@@ -95,6 +91,15 @@ const loadStudent = async () => {
     loading.value = false
   }
 }
+
+// 当路由参数 id 变化时，重新加载学生信息（支持在编辑页内跳转不同学生）
+watch(
+  () => route.params.id,
+  () => {
+    loadStudent()
+  },
+  { immediate: true }
+)
 
 const handleSubmit = async () => {
   if (!formRef.value) return

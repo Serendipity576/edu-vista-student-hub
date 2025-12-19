@@ -1,6 +1,6 @@
 package com.eduvista.controller;
 
-import com.eduvista.dto.PageResponse; // 必须导入你刚才创建的 PageResponse 类
+import com.eduvista.util.PageResponse; // 必须导入你刚才创建的 PageResponse 类
 import com.eduvista.dto.StudentDTO;
 import com.eduvista.service.StudentService;
 import com.eduvista.util.CommonResponse;

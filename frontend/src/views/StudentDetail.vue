@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -65,14 +65,6 @@ const student = ref({})
 const uploadUrl = ref('')
 const uploadHeaders = ref({})
 
-onMounted(() => {
-  uploadUrl.value = `/api/student/${route.params.id}/avatar`
-  uploadHeaders.value = {
-    Authorization: `Bearer ${authStore.token}`
-  }
-  loadStudent()
-})
-
 const loadStudent = async () => {
   loading.value = true
   try {
@@ -86,6 +78,19 @@ const loadStudent = async () => {
     loading.value = false
   }
 }
+
+// 当路由参数 id 变化时，重新加载学生信息与上传配置（支持在详情页内跳转不同学生）
+watch(
+  () => route.params.id,
+  () => {
+    uploadUrl.value = `/api/student/${route.params.id}/avatar`
+    uploadHeaders.value = {
+      Authorization: `Bearer ${authStore.token}`
+    }
+    loadStudent()
+  },
+  { immediate: true }
+)
 
 const handleAvatarSuccess = (response) => {
   if (response.code === 200) {

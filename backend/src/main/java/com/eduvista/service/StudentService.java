@@ -1,6 +1,6 @@
 package com.eduvista.service;
 
-import com.eduvista.dto.PageResponse;
+import com.eduvista.util.PageResponse;
 import com.eduvista.dto.StudentDTO;
 import com.eduvista.entity.Class;
 import com.eduvista.entity.Student;
