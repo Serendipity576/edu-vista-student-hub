@@ -1,6 +1,5 @@
 package com.eduvista.service;
 
-import com.eduvista.dto.PageResponse;
 import com.eduvista.entity.Student;
 import com.eduvista.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,18 +24,14 @@ public class StudentService {
             .orElseThrow(() -> new RuntimeException("学生不存在"));
     }
 
-    // --- 修改点 1: findAll ---
     @Cacheable(value = "students", key = "'page:' + #pageable.pageNumber + ':size:' + #pageable.pageSize")
-    public PageResponse<Student> findAll(Pageable pageable) {
-        Page<Student> page = studentRepository.findAll(pageable);
-        return PageResponse.of(page); // 转换为自定义对象
+    public Page<Student> findAll(Pageable pageable) {
+        return studentRepository.findAll(pageable);
     }
 
-    // --- 修改点 2: search ---
-    @Cacheable(value = "students", key = "'search:' + #keyword + ':p:' + #pageable.pageNumber")
-    public PageResponse<Student> search(String keyword, Pageable pageable) {
-        Page<Student> page = studentRepository.searchByKeyword(keyword, pageable);
-        return PageResponse.of(page); // 转换为自定义对象
+    @Cacheable(value = "students", key = "'search:' + #keyword")
+    public Page<Student> search(String keyword, Pageable pageable) {
+        return studentRepository.searchByKeyword(keyword, pageable);
     }
 
     @CacheEvict(value = "students", allEntries = true)
@@ -45,7 +40,8 @@ public class StudentService {
         if (student.getId() == null && studentRepository.existsByStudentNo(student.getStudentNo())) {
             throw new RuntimeException("学号已存在");
         }
-        return studentRepository.save(student);
+        Student saved = studentRepository.save(student);
+        return saved;
     }
 
     @CacheEvict(value = "students", allEntries = true)
@@ -58,3 +54,4 @@ public class StudentService {
         return studentRepository.findAll();
     }
 }
+

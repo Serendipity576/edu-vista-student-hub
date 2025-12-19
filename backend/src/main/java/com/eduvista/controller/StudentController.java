@@ -1,11 +1,11 @@
 package com.eduvista.controller;
 
-import com.eduvista.dto.PageResponse; // 必须导入你刚才创建的 PageResponse 类
 import com.eduvista.entity.Student;
 import com.eduvista.service.StudentService;
 import com.eduvista.util.CommonResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -32,31 +32,21 @@ public class StudentController {
     @Value("${file.upload.path}")
     private String uploadPath;
 
-    /**
-     * 修改点：将返回类型改为 CommonResponse<PageResponse<Student>>
-     */
     @GetMapping("/list")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-    public CommonResponse<PageResponse<Student>> getStudentList(
+    public CommonResponse<Page<Student>> getStudentList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword) {
-
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-
-        // 修改点：变量类型也改为 PageResponse<Student>
-        PageResponse<Student> students;
-
+        Page<Student> students;
         if (keyword != null && !keyword.isEmpty()) {
             students = studentService.search(keyword, pageable);
         } else {
             students = studentService.findAll(pageable);
         }
-
         return CommonResponse.success(students);
     }
-
-    // --- 以下方法保持不变 ---
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
@@ -130,3 +120,4 @@ public class StudentController {
         return CommonResponse.success(students);
     }
 }
+

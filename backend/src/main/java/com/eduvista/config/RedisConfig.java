@@ -1,7 +1,10 @@
 package com.eduvista.config;
 
-import com.fasterxml.jackson.annotation.*;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.redisson.Redisson;
@@ -12,9 +15,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -22,9 +22,17 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.data.domain.PageImpl;
+import java.util.List;
 
 import java.time.Duration;
-import java.util.List;
+
+
 
 @Configuration
 @EnableCaching
@@ -37,23 +45,22 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int redisPort;
 
+    /**
+     * 核心修改：创建一个支持 Java8 日期序列化的 Jackson 序列化器
+     */
     private GenericJackson2JsonRedisSerializer createJacksonSerializer() {
         ObjectMapper om = new ObjectMapper();
-
-        // 1. 基础配置
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.registerModule(new JavaTimeModule());
         om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // 【新增 1】：忽略反序列化时 JSON 中存在但 Java 对象中没有的属性，防止报错
         om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        // 2. 注册模块 (Java8 时间 + Spring Data 分页支持)
-        om.registerModule(new JavaTimeModule());
-
-        // 3. 核心：使用 Mixin 处理 PageImpl
-        // 注意：这里不再手动写复杂的构造函数匹配，而是利用 PageImpl 的特性
+        // 【新增 2】：关键配置！注册 PageImpl 的 Mixin
+        // 这会告诉 Jackson：看到 PageImpl 时，用这个 Mixin 类里的规则处理
         om.addMixIn(PageImpl.class, PageImplMixin.class);
-        om.addMixIn(Pageable.class, PageableMixin.class);
 
-        // 4. 开启类型信息 (保持反序列化后的类型正确)
         om.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
@@ -64,7 +71,8 @@ public class RedisConfig {
     }
 
     /**
-     * 更加稳健的 PageImpl Mixin
+     * 【新增 3】：PageImpl 的 Mixin 类
+     * 映射 JSON 中的字段到 PageImpl 的构造函数
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static abstract class PageImplMixin<T> {
@@ -74,32 +82,23 @@ public class RedisConfig {
                 @JsonProperty("number") int number,
                 @JsonProperty("size") int size,
                 @JsonProperty("totalElements") long totalElements,
-                @JsonProperty("pageable") Pageable pageable // 使用 Pageable 接口
+                @JsonProperty("pageable") JsonNode pageable // 暂时用 JsonNode 接收
         ) {}
     }
 
-    /**
-     * 必须同时提供 Pageable 的 Mixin，因为 PageImpl 构造函数依赖它
-     */
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static abstract class PageableMixin {
-        @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
-        public static PageRequest of(@JsonProperty("pageNumber") int page, @JsonProperty("pageSize") int size) {
-            return PageRequest.of(page, size);
-        }
-    }
-
-    // --- 剩下的 Bean 定义保持不变 ---
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         GenericJackson2JsonRedisSerializer serializer = createJacksonSerializer();
+
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
+        // 使用自定义的序列化器
         template.setValueSerializer(serializer);
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(serializer);
+
         template.afterPropertiesSet();
         return template;
     }
@@ -107,18 +106,24 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         GenericJackson2JsonRedisSerializer serializer = createJacksonSerializer();
+
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(30))
             .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+            // 使用自定义的序列化器
             .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
             .disableCachingNullValues();
-        return RedisCacheManager.builder(connectionFactory).cacheDefaults(config).build();
+
+        return RedisCacheManager.builder(connectionFactory)
+            .cacheDefaults(config)
+            .build();
     }
 
     @Bean
     public RedissonClient redissonClient() {
         Config config = new Config();
-        config.useSingleServer().setAddress("redis://" + redisHost + ":" + redisPort);
+        config.useSingleServer()
+            .setAddress("redis://" + redisHost + ":" + redisPort);
         return Redisson.create(config);
     }
 }
