@@ -5,7 +5,8 @@ spring:
     name: student-hub-backend
   
   datasource:
-    url: jdbc:mysql://localhost:3306/student_hub?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    # 增加 allowPublicKeyRetrieval=true 解决 MySQL 8 公钥检索限制
+    url: jdbc:mysql://localhost:3306/student_hub?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: kongshan
     password: zmt20041204
     driver-class-name: com.mysql.cj.jdbc.Driver

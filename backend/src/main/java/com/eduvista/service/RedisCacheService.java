@@ -1,65 +1,96 @@
 package com.eduvista.service;
 
-import com.eduvista.entity.Student;
+import com.eduvista.dto.StudentDTO;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class RedisCacheService {
-    
+
+    private static final String STUDENT_HASH_PREFIX = "student:hash:";
+    private static final Duration STUDENT_TTL = Duration.ofMinutes(30);
+
     private final RedisTemplate<String, Object> redisTemplate;
     private final RedissonClient redissonClient;
-    
+
     public void incrementOperationCount(String operation) {
         String key = "operation:count:" + operation;
         redisTemplate.opsForValue().increment(key);
         redisTemplate.expire(key, 1, TimeUnit.DAYS);
     }
-    
+
     public Long getOperationCount(String operation) {
         String key = "operation:count:" + operation;
         Object value = redisTemplate.opsForValue().get(key);
         return value != null ? Long.parseLong(value.toString()) : 0L;
     }
-    
-    public void cacheStudentHash(Student student) {
-        String key = "student:hash:" + student.getId();
-        redisTemplate.opsForHash().put(key, "id", student.getId());
-        redisTemplate.opsForHash().put(key, "studentNo", student.getStudentNo());
-        redisTemplate.opsForHash().put(key, "name", student.getName());
-        redisTemplate.opsForHash().put(key, "gender", student.getGender() != null ? student.getGender() : "");
-        redisTemplate.opsForHash().put(key, "phone", student.getPhone() != null ? student.getPhone() : "");
-        redisTemplate.opsForHash().put(key, "email", student.getEmail() != null ? student.getEmail() : "");
-        redisTemplate.expire(key, 30, TimeUnit.MINUTES);
+
+    public void cacheStudentHash(StudentDTO student) {
+        if (student == null || student.getId() == null) {
+            return;
+        }
+        String key = STUDENT_HASH_PREFIX + student.getId();
+        HashOperations<String, Object, Object> hash = redisTemplate.opsForHash();
+        hash.putAll(key, Map.of(
+                "id", student.getId(),
+                "studentNo", student.getStudentNo(),
+                "name", student.getName(),
+                "gender", student.getGender() != null ? student.getGender() : "",
+                "phone", student.getPhone() != null ? student.getPhone() : "",
+                "email", student.getEmail() != null ? student.getEmail() : "",
+                "classId", student.getClassId() != null ? student.getClassId() : "",
+                "className", student.getClassName() != null ? student.getClassName() : "",
+                "avatar", student.getAvatar() != null ? student.getAvatar() : ""
+        ));
+        redisTemplate.expire(key, STUDENT_TTL);
     }
-    
-    public Student getStudentFromHash(Long studentId) {
-        String key = "student:hash:" + studentId;
+
+    public StudentDTO getStudentFromHash(Long studentId) {
+        if (studentId == null) {
+            return null;
+        }
+        String key = STUDENT_HASH_PREFIX + studentId;
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             return null;
         }
-        // 简化版，实际应该映射所有字段
-        Student student = new Student();
-        student.setId(Long.parseLong(redisTemplate.opsForHash().get(key, "id").toString()));
-        student.setStudentNo(redisTemplate.opsForHash().get(key, "studentNo").toString());
-        student.setName(redisTemplate.opsForHash().get(key, "name").toString());
+        HashOperations<String, Object, Object> hash = redisTemplate.opsForHash();
+        StudentDTO student = new StudentDTO();
+        student.setId(studentId);
+        student.setStudentNo(stringVal(hash.get(key, "studentNo")));
+        student.setName(stringVal(hash.get(key, "name")));
+        student.setGender(stringVal(hash.get(key, "gender")));
+        student.setPhone(stringVal(hash.get(key, "phone")));
+        student.setEmail(stringVal(hash.get(key, "email")));
+        student.setClassName(stringVal(hash.get(key, "className")));
+        student.setAvatar(stringVal(hash.get(key, "avatar")));
+        Object classIdVal = hash.get(key, "classId");
+        if (classIdVal != null && !"".equals(classIdVal.toString())) {
+            student.setClassId(Long.parseLong(classIdVal.toString()));
+        }
         return student;
     }
-    
-    public Student getStudentWithLock(Long studentId, StudentService studentService) {
+
+    private String stringVal(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+    public StudentDTO getStudentWithLock(Long studentId, StudentService studentService) {
         String lockKey = "lock:student:" + studentId;
         RLock lock = redissonClient.getLock(lockKey);
-        
+
         try {
             if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
                 try {
-                    Student student = getStudentFromHash(studentId);
+                    StudentDTO student = getStudentFromHash(studentId);
                     if (student == null) {
                         student = studentService.findById(studentId);
                         cacheStudentHash(student);
