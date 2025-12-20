@@ -67,9 +67,29 @@ public class StudentController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public CommonResponse<StudentDTO> createStudent(@RequestBody StudentDTO student) {
+    public CommonResponse<Map<String, Object>> createStudent(@RequestBody StudentDTO student) {
         StudentDTO saved = studentService.save(student);
-        return CommonResponse.success(saved);
+        
+        // 构建响应，包含学生信息和 Kafka 消息状态
+        Map<String, Object> response = new HashMap<>();
+        response.put("student", saved);
+        
+        // 如果是新增学生（id 为 null），总是返回 Kafka 消息状态
+        if (student.getId() == null) {
+            Boolean kafkaSent = saved.getKafkaMessageSent();
+            if (kafkaSent == null) {
+                // 如果 Kafka Producer 不可用，设置为 false
+                kafkaSent = false;
+            }
+            response.put("kafkaMessageSent", kafkaSent);
+            if (kafkaSent) {
+                response.put("kafkaMessage", "Kafka 消息已成功发送：学生注册消息和欢迎消息已发送到消息队列");
+            } else {
+                response.put("kafkaMessage", "Kafka 消息发送失败：请检查 Kafka 服务是否正常运行");
+            }
+        }
+        
+        return CommonResponse.success(response);
     }
 
     @PutMapping("/{id}")

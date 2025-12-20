@@ -26,7 +26,6 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: 
       database: 0
       timeout: 3000ms
       lettuce:
@@ -43,23 +42,23 @@ spring:
       flush-mode: on-save
       save-mode: on-set-attribute
   
-  # Kafka配置（如果未安装Kafka，请注释掉以下配置）
-  # kafka:
-  #   bootstrap-servers: localhost:9092
-  #   producer:
-  #     key-serializer: org.apache.kafka.common.serialization.StringSerializer
-  #     value-serializer: org.apache.kafka.common.serialization.StringSerializer
-  #     acks: all
-  #     retries: 3
-  #     enable-idempotence: true
-  #   consumer:
-  #     group-id: student-hub-group
-  #     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  #     value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  #     enable-auto-commit: false
-  #     auto-offset-reset: earliest
-  #     properties:
-  #       spring.json.trusted.packages: "*"
+  # Kafka配置
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      enable-idempotence: true
+    consumer:
+      group-id: student-hub-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
   
   servlet:
     multipart:

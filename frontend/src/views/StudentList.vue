@@ -229,7 +229,33 @@ const handleSubmit = async () => {
           response = await axios.post('/student', studentForm)
         }
         if (response.data.code === 200) {
+          // 显示成功消息
           ElMessage.success(isEdit.value ? '更新成功' : '添加成功')
+          
+          // 如果是新增学生，检查并显示 Kafka 消息状态
+          if (!isEdit.value && response.data.data) {
+            const data = response.data.data
+            console.log('创建学生返回的数据:', data)
+            // 处理新的响应结构：{ student: {...}, kafkaMessageSent: true/false, kafkaMessage: "..." }
+            if (data.kafkaMessageSent !== undefined) {
+              if (data.kafkaMessageSent) {
+                ElMessage({
+                  message: data.kafkaMessage || '✅ Kafka 消息已成功发送：学生注册消息和欢迎消息已发送到消息队列',
+                  type: 'success',
+                  duration: 5000,
+                  showClose: true
+                })
+              } else {
+                ElMessage({
+                  message: data.kafkaMessage || '⚠️ Kafka 消息发送失败，请检查 Kafka 服务是否正常运行',
+                  type: 'warning',
+                  duration: 6000,
+                  showClose: true
+                })
+              }
+            }
+          }
+          
           dialogVisible.value = false
           loadStudents()
         }

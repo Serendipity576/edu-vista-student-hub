@@ -4,10 +4,12 @@ import com.eduvista.util.PageResponse;
 import com.eduvista.dto.StudentDTO;
 import com.eduvista.entity.Class;
 import com.eduvista.entity.Student;
+import com.eduvista.kafka.KafkaProducer;
 import com.eduvista.repository.ClassRepository;
 import com.eduvista.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +29,9 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final ClassRepository classRepository;
+    
+    @Autowired(required = false)
+    private KafkaProducer kafkaProducer;
 
     /**
      * 将 Entity 转换为 DTO 的私有方法
@@ -143,7 +149,37 @@ public class StudentService {
         }
         
         Student saved = studentRepository.save(student);
-        return convertToDTO(saved);
+        StudentDTO savedDTO = convertToDTO(saved);
+        
+        // 如果是新增学生，尝试发送 Kafka 消息，并记录发送状态
+        if (dto.getId() == null) {
+            boolean kafkaSuccess = false;
+            if (kafkaProducer != null) {
+                try {
+                    kafkaProducer.sendStudentRegisterMessage(
+                        savedDTO.getStudentNo(),
+                        savedDTO.getName(),
+                        savedDTO.getEmail()
+                    );
+                    kafkaProducer.sendWelcomeMessage(
+                        savedDTO.getStudentNo(),
+                        savedDTO.getName()
+                    );
+                    kafkaSuccess = true;
+                } catch (Exception e) {
+                    // Kafka 发送失败不影响主流程，只记录日志
+                    // 日志已在 KafkaProducer 中记录
+                    kafkaSuccess = false;
+                }
+            } else {
+                // Kafka Producer 不可用（可能 Kafka 未配置或未启用）
+                kafkaSuccess = false;
+            }
+            // 始终设置 Kafka 消息状态，即使 Kafka 不可用也要返回状态
+            savedDTO.setKafkaMessageSent(kafkaSuccess);
+        }
+        
+        return savedDTO;
     }
 
     /**

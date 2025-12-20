@@ -11,10 +11,13 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -37,6 +40,7 @@ import java.time.Duration;
 @Configuration
 @EnableCaching
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "spring.data.redis.host")
+@Slf4j
 public class RedisConfig {
 
     @Value("${spring.data.redis.host}")
@@ -120,10 +124,33 @@ public class RedisConfig {
     }
 
     @Bean
+    @ConditionalOnMissingBean(RedissonClient.class)
+    @Lazy
     public RedissonClient redissonClient() {
-        Config config = new Config();
-        config.useSingleServer()
-            .setAddress("redis://" + redisHost + ":" + redisPort);
-        return Redisson.create(config);
+        try {
+            Config config = new Config();
+            config.useSingleServer()
+                .setAddress("redis://" + redisHost + ":" + redisPort)
+                .setConnectTimeout(3000)
+                .setRetryAttempts(1)
+                .setRetryInterval(1000);
+            RedissonClient client = Redisson.create(config);
+            // 测试连接（使用非弃用方法）
+            try {
+                client.getBucket("test").set("test");
+                client.getBucket("test").delete();
+            } catch (Exception testEx) {
+                // 连接测试失败，但客户端可能仍然可用
+                log.debug("Redis 连接测试失败，但客户端已创建: {}", testEx.getMessage());
+            }
+            log.info("RedissonClient 创建成功，已连接到 Redis: {}:{}", redisHost, redisPort);
+            return client;
+        } catch (Exception e) {
+            // 如果 Redis 连接失败，记录警告并返回 null
+            // RedisCacheService 已经处理了 redissonClient 为 null 的情况
+            log.warn("无法连接到 Redis 服务器 {}:{}，应用将在没有 Redis 的情况下运行。错误: {}", 
+                    redisHost, redisPort, e.getMessage());
+            return null;
+        }
     }
 }

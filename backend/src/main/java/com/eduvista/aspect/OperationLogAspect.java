@@ -50,17 +50,15 @@ public class OperationLogAspect {
         String params = Arrays.toString(joinPoint.getArgs());
         
         Object result = null;
-        Exception exception = null;
         
         try {
             result = joinPoint.proceed();
         } catch (Exception e) {
-            exception = e;
             throw e;
         } finally {
             long executionTime = System.currentTimeMillis() - startTime;
             
-            OperationLog log = OperationLog.builder()
+            OperationLog operationLog = OperationLog.builder()
                 .username(username)
                 .operation(operation)
                 .method(method)
@@ -70,9 +68,14 @@ public class OperationLogAspect {
                 .executionTime(executionTime)
                 .build();
             
-            operationLogRepository.save(log);
+            operationLogRepository.save(operationLog);
             
-            redisCacheService.incrementOperationCount(operation);
+            try {
+                redisCacheService.incrementOperationCount(operation);
+            } catch (Exception e) {
+                // Redis 不可用时，静默失败，不影响主流程
+                log.debug("Redis 操作失败，已跳过: {}", e.getMessage());
+            }
         }
         
         return result;

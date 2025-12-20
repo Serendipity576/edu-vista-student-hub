@@ -25,4 +25,7 @@ public class StudentDTO implements Serializable {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Kafka 消息发送状态（仅用于响应，不持久化）
+    private Boolean kafkaMessageSent;
 }
