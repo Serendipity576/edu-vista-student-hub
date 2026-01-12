@@ -6,40 +6,75 @@
       </template>
     </el-page-header>
     
-    <el-card v-loading="loading" class="detail-card">
+    <el-card v-loading="loading" class="detail-card" shadow="hover">
       <div class="detail-content">
         <div class="avatar-section">
-          <el-upload
-            class="avatar-uploader"
-            :action="uploadUrl"
-            :headers="uploadHeaders"
-            :show-file-list="false"
-            :on-success="handleAvatarSuccess"
-            :before-upload="beforeAvatarUpload"
-            :disabled="authStore.user?.role !== 'ADMIN'"
-          >
-            <img v-if="student.avatar" :src="student.avatar" class="avatar" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-          <p class="avatar-hint" v-if="authStore.user?.role === 'ADMIN'">点击上传头像</p>
+          <div class="avatar-wrapper">
+            <el-upload
+              class="avatar-uploader"
+              :action="uploadUrl"
+              :headers="uploadHeaders"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+              :before-upload="beforeAvatarUpload"
+              :disabled="authStore.user?.role !== 'ADMIN'"
+            >
+              <div class="avatar-container">
+                <img v-if="student.avatar" :src="student.avatar" class="avatar" />
+                <div v-else class="avatar-placeholder">
+                  <el-icon class="avatar-uploader-icon"><User /></el-icon>
+                </div>
+                <div v-if="authStore.user?.role === 'ADMIN'" class="avatar-overlay">
+                  <el-icon><Camera /></el-icon>
+                </div>
+              </div>
+            </el-upload>
+            <p class="avatar-hint" v-if="authStore.user?.role === 'ADMIN'">点击上传头像</p>
+            <h2 class="student-name">{{ student.name }}</h2>
+            <el-tag :type="student.gender === '男' ? 'primary' : 'danger'" size="large" class="gender-tag">
+              {{ student.gender }}
+            </el-tag>
+          </div>
         </div>
         
         <div class="info-section">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="学号">{{ student.studentNo }}</el-descriptions-item>
+          <el-descriptions :column="2" border class="info-descriptions">
+            <el-descriptions-item label="学号">
+              <el-tag type="primary">{{ student.studentNo }}</el-tag>
+            </el-descriptions-item>
             <el-descriptions-item label="姓名">{{ student.name }}</el-descriptions-item>
-            <el-descriptions-item label="性别">{{ student.gender }}</el-descriptions-item>
-            <el-descriptions-item label="生日">{{ student.birthDate }}</el-descriptions-item>
-            <el-descriptions-item label="电话">{{ student.phone }}</el-descriptions-item>
-            <el-descriptions-item label="邮箱">{{ student.email }}</el-descriptions-item>
-            <el-descriptions-item label="地址" :span="2">{{ student.address }}</el-descriptions-item>
-            <el-descriptions-item label="班级">{{ student.studentClass?.className }}</el-descriptions-item>
-            <el-descriptions-item label="创建时间">{{ formatDate(student.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="性别">
+              <el-tag :type="student.gender === '男' ? 'primary' : 'danger'">{{ student.gender }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="生日">{{ student.birthDate || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="电话">
+              <el-icon class="info-icon"><Phone /></el-icon>
+              {{ student.phone || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">
+              <el-icon class="info-icon"><Message /></el-icon>
+              {{ student.email || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="地址" :span="2">
+              <el-icon class="info-icon"><Location /></el-icon>
+              {{ student.address || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="班级">
+              <el-tag type="info">{{ student.studentClass?.className || '-' }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="创建时间">
+              <el-icon class="info-icon"><Clock /></el-icon>
+              {{ formatDate(student.createdAt) }}
+            </el-descriptions-item>
           </el-descriptions>
           
           <div class="action-buttons" v-if="authStore.user?.role === 'ADMIN'">
-            <el-button type="primary" @click="handleEdit">编辑</el-button>
-            <el-button type="danger" @click="handleDelete">删除</el-button>
+            <el-button type="primary" @click="handleEdit" :icon="Edit" size="large">
+              编辑信息
+            </el-button>
+            <el-button type="danger" @click="handleDelete" :icon="Delete" size="large">
+              删除学生
+            </el-button>
           </div>
         </div>
       </div>
@@ -51,7 +86,7 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, User, Camera, Phone, Message, Location, Clock, Edit, Delete } from '@element-plus/icons-vue'
 import axios from '@/utils/axios'
 import { useAuthStore } from '@/stores/auth'
 
@@ -152,60 +187,166 @@ const formatDate = (dateStr) => {
 
 .student-detail {
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    
+    :deep(.el-page-header__content) {
+      .text-large {
+        font-size: 24px;
+        font-weight: 600;
+        background: linear-gradient(135deg, var(--el-color-primary), #66b1ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+    }
   }
   
   .detail-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    
+    :deep(.el-card__body) {
+      padding: 30px;
+    }
+    
     .detail-content {
       display: flex;
       gap: 40px;
       
       .avatar-section {
         text-align: center;
+        min-width: 220px;
         
-        .avatar-uploader {
-          :deep(.el-upload) {
-            border: 1px dashed var(--el-border-color);
-            border-radius: 6px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transition: var(--el-transition-duration-fast);
+        .avatar-wrapper {
+          .avatar-uploader {
+            :deep(.el-upload) {
+              border: none;
+              border-radius: 50%;
+              cursor: pointer;
+              position: relative;
+              overflow: visible;
+              transition: all 0.3s ease;
+              
+              &:hover {
+                transform: scale(1.05);
+                
+                .avatar-overlay {
+                  opacity: 1;
+                }
+              }
+            }
             
-            &:hover {
-              border-color: var(--el-color-primary);
+            .avatar-container {
+              position: relative;
+              width: 180px;
+              height: 180px;
+              margin: 0 auto;
+              border-radius: 50%;
+              overflow: hidden;
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+              border: 4px solid var(--el-color-primary-light-9);
+              
+              .avatar {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+              }
+              
+              .avatar-placeholder {
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                
+                .avatar-uploader-icon {
+                  font-size: 64px;
+                  color: white;
+                }
+              }
+              
+              .avatar-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                
+                .el-icon {
+                  font-size: 32px;
+                  color: white;
+                }
+              }
             }
           }
           
-          .avatar {
-            width: 178px;
-            height: 178px;
-            display: block;
-            object-fit: cover;
+          .avatar-hint {
+            margin-top: 16px;
+            color: var(--el-text-color-secondary);
+            font-size: 13px;
           }
           
-          .avatar-uploader-icon {
-            font-size: 28px;
-            color: #8c939d;
-            width: 178px;
-            height: 178px;
-            text-align: center;
-            line-height: 178px;
+          .student-name {
+            margin: 20px 0 12px;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--el-text-color-primary);
           }
-        }
-        
-        .avatar-hint {
-          margin-top: 10px;
-          color: var(--el-text-color-secondary);
-          font-size: 12px;
+          
+          .gender-tag {
+            margin-top: 8px;
+          }
         }
       }
       
       .info-section {
         flex: 1;
         
+        .info-descriptions {
+          :deep(.el-descriptions__label) {
+            font-weight: 600;
+            color: var(--el-text-color-primary);
+          }
+          
+          :deep(.el-descriptions__content) {
+            color: var(--el-text-color-regular);
+          }
+          
+          .info-icon {
+            margin-right: 6px;
+            color: var(--el-text-color-secondary);
+            font-size: 14px;
+          }
+        }
+        
         .action-buttons {
-          margin-top: 20px;
+          margin-top: 30px;
+          display: flex;
+          gap: 12px;
+          padding-top: 20px;
+          border-top: 1px solid var(--el-border-color-lighter);
+          
+          .el-button {
+            flex: 1;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+          }
         }
       }
     }
@@ -215,6 +356,11 @@ const formatDate = (dateStr) => {
 @include mobile {
   .detail-content {
     flex-direction: column;
+    gap: 24px;
+    
+    .avatar-section {
+      min-width: auto;
+    }
   }
 }
 </style>
