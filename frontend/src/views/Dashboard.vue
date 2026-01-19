@@ -64,7 +64,8 @@ import {
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  CalendarComponent
+  CalendarComponent,
+  VisualMapComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import axios from '@/utils/axios'
@@ -79,7 +80,8 @@ use([
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  CalendarComponent
+  CalendarComponent,
+  VisualMapComponent
 ])
 
 const loading = ref(false)

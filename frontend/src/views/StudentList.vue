@@ -157,6 +157,16 @@
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="studentForm.email" placeholder="请输入邮箱" />
         </el-form-item>
+        <el-form-item label="班级" prop="classId">
+          <el-select v-model="studentForm.classId" placeholder="请选择班级" style="width: 100%">
+            <el-option
+              v-for="cls in classes"
+              :key="cls.id"
+              :label="cls.className"
+              :value="cls.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="地址" prop="address">
           <el-input v-model="studentForm.address" type="textarea" :rows="3" placeholder="请输入地址" />
         </el-form-item>
@@ -182,6 +192,7 @@ const authStore = useAuthStore()
 
 const loading = ref(false)
 const students = ref([])
+const classes = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('添加学生')
 const formRef = ref()
@@ -204,12 +215,14 @@ const studentForm = reactive({
   gender: '',
   phone: '',
   email: '',
-  address: ''
+  address: '',
+  classId: null
 })
 
 const rules = {
   studentNo: [{ required: true, message: '请输入学号', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  classId: [{ required: true, message: '请选择班级', trigger: 'change' }]
 }
 
 const loadStudents = async () => {
@@ -234,6 +247,17 @@ const loadStudents = async () => {
   }
 }
 
+const loadClasses = async () => {
+  try {
+    const response = await axios.get('/class/list')
+    if (response.data.code === 200) {
+      classes.value = response.data.data
+    }
+  } catch (error) {
+    console.error('加载班级列表失败', error)
+  }
+}
+
 const handleAdd = () => {
   isEdit.value = false
   dialogTitle.value = '添加学生'
@@ -243,7 +267,8 @@ const handleAdd = () => {
     gender: '',
     phone: '',
     email: '',
-    address: ''
+    address: '',
+    classId: null
   })
   dialogVisible.value = true
 }
@@ -340,6 +365,7 @@ const tableRowClassName = ({ rowIndex }) => {
 }
 
 onMounted(() => {
+  loadClasses()
   loadStudents()
 })
 </script>

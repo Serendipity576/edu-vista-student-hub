@@ -16,7 +16,7 @@
             class="theme-btn"
           />
         </el-tooltip>
-        <el-dropdown trigger="click" @command="handleCommand" class="user-dropdown">
+        <el-dropdown trigger="hover" @command="handleCommand" class="user-dropdown">
           <span class="user-info">
             <el-avatar :src="authStore.user?.avatar" :size="36" class="user-avatar">
               <el-icon><User /></el-icon>
@@ -41,7 +41,6 @@
           router
           :collapse="false"
           class="sidebar-menu"
-          @select="handleMenuSelect"
         >
           <el-menu-item index="/dashboard" v-if="authStore.user?.role === 'ADMIN'">
             <el-icon><DataAnalysis /></el-icon>
@@ -82,13 +81,6 @@ const handleCommand = (command) => {
   if (command === 'logout') {
     authStore.logout()
     router.push({ name: 'Login' })
-  }
-}
-
-const handleMenuSelect = (index) => {
-  // 显式跳转，确保点击菜单一定导航
-  if (index) {
-    router.push(index)
   }
 }
 </script>

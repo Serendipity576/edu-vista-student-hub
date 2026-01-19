@@ -128,7 +128,10 @@ const handleLogin = async () => {
       if (result.success) {
         ElMessage.success('登录成功')
         const redirect = route.query.redirect || '/dashboard'
-        router.push(redirect)
+        setTimeout(() => {
+          ElMessage.closeAll()
+          router.push(redirect)
+        }, 1500) // 延迟1.5秒，显示消息后关闭并跳转
       } else {
         ElMessage.error(result.message || '登录失败')
       }

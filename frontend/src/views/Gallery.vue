@@ -10,11 +10,11 @@
           v-for="(student, index) in students"
           :key="student.id"
           class="gallery-item"
-          :style="{ height: getRandomHeight() }"
+          :style="{ height: student.randomHeight + 'px' }"
           @click="handleImageClick(student)"
         >
           <el-image
-            :src="student.avatar || '/default-avatar.png'"
+            :src="student.avatar ? `${student.avatar}` : 'https://via.placeholder.com/200x200/cccccc/000000?text=No+Avatar'"
             :alt="student.name"
             fit="cover"
             lazy
@@ -51,7 +51,7 @@
         <div class="preview-info">
           <p><strong>姓名：</strong>{{ previewStudent.name }}</p>
           <p><strong>学号：</strong>{{ previewStudent.studentNo }}</p>
-          <p><strong>班级：</strong>{{ previewStudent.studentClass?.className }}</p>
+          <p><strong>班级：</strong>{{ previewStudent.className }}</p>
         </div>
       </div>
     </el-dialog>
@@ -74,13 +74,6 @@ const pagination = reactive({
 })
 
 const heights = [200, 250, 300, 350]
-const heightIndex = ref(0)
-
-const getRandomHeight = () => {
-  const height = heights[heightIndex.value % heights.length]
-  heightIndex.value++
-  return `${height}px`
-}
 
 const loadStudents = async () => {
   loading.value = true
@@ -91,9 +84,11 @@ const loadStudents = async () => {
     }
     const response = await axios.get('/student/list', { params })
     if (response.data.code === 200) {
-      students.value = response.data.data.content
+      students.value = response.data.data.content.map(student => ({
+        ...student,
+        randomHeight: heights[Math.floor(Math.random() * heights.length)]
+      }))
       pagination.total = response.data.data.totalElements
-      heightIndex.value = 0
     }
   } catch (error) {
     console.error('加载学生列表失败', error)

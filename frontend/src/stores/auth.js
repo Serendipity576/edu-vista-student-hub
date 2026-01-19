@@ -4,7 +4,17 @@ import axios from '@/utils/axios'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+  const user = ref(null)
+  
+  try {
+    const userStr = localStorage.getItem('user')
+    if (userStr && userStr !== 'null') {
+      user.value = JSON.parse(userStr)
+    }
+  } catch (e) {
+    console.error('Failed to parse user from localStorage', e)
+    localStorage.removeItem('user')
+  }
   
   const isAuthenticated = computed(() => !!token.value)
   
