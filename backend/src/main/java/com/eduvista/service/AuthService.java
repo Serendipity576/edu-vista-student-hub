@@ -59,7 +59,7 @@ public class AuthService {
             
             return CommonResponse.success(data);
         } catch (Exception e) {
-            return CommonResponse.error("用户名或密码错误");
+            return CommonResponse.error("用户名或密码错误" + e.getMessage());
         }
     }
     

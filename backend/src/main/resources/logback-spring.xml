@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 生成时间戳，用于文件名 -->
+    <timestamp key="timestamp" datePattern="yyyy-MM-dd_HH-mm-ss"/>
+
+    <!-- 文件Appender，将日志输出到时间戳命名的文件 -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/app-${timestamp}.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 控制台Appender，可选保留，如果不需要终端输出可注释掉 -->
+    <!--
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    -->
+
+    <!-- 根日志器，级别为INFO，只输出到FILE -->
+    <root level="info">
+        <appender-ref ref="FILE"/>
+        <!-- 如果需要控制台输出，取消注释 -->
+        <!-- <appender-ref ref="CONSOLE"/> -->
+    </root>
+
+    <!-- 可选：特定logger的配置，例如Spring的DEBUG级别 -->
+    <logger name="com.eduvista" level="debug"/>
+</configuration>
